@@ -48,3 +48,32 @@ class Profile(models.Model):
             return f"Синфи {self.current_level}"
         return f"Курси {self.current_level}" 
         
+        
+class Subject(models.Model):
+    LEVEL_TYPE_CHOICES = (
+        ('school', 'Мактаб'),
+        ('university', 'Донишгоҳ'),
+    )
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=20 , blank=True,null=True)
+    grade_level = models.CharField(max_length=20,blank=True,null=True)
+    description = models.TextField(blank=True,null=True)
+    color = models.CharField(max_length=7,default="#0c0d14")
+    icon = models.CharField(max_length=50 , default="fas fa-book")
+    is_public = models.BooleanField(default=True)
+    requires_approval = models.BooleanField(default=False)
+    max_students = models.PositiveIntegerField(default=0)
+    pass_percentage = models.PositiveIntegerField(default=60)
+    prerequisites = models.TextField(blank=True,null=True)
+    level_type = models.CharField( max_length=50,choices=LEVEL_TYPE_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=False)
+    
+    class Meta:
+        verbose_name = 'Фан'
+        verbose_name_plural = 'Фанҳо'
+        unique_together = ['name', 'level_type']
+    
+    def __str__(self):
+        return f"{self.name} ({self.get_level_type_display()})"
+    
+    
