@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
+from datetime import timezone
 
 class  User(AbstractUser):
     ROLE_CHOICES = (
@@ -77,3 +78,78 @@ class Subject(models.Model):
         return f"{self.name} ({self.get_level_type_display()})"
     
     
+class Group(models.Model):
+    name = models.CharField(max_length=100)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE,related_name='groups')
+    leader = models.ForeignKey(User, on_delete=models.CASCADE, related_name='led_groups')
+    created_at = models.DateTimeField(auto_now_add=False)
+    
+    class Meta:
+        erbose_name = 'Гурӯҳ'
+        verbose_name_plural = 'Гурӯҳҳо'
+        
+    def __str__(self):
+        return f'{self.name} ({self.subject.name})'
+    
+    
+
+class GroupMember(models.Model):
+    group = models.ForeignKey( Group, on_delete=models.CASCADE , related_name='members')
+    user = models.ForeignKey(User, on_delete=models.CASCADE , related_name='group_memberships')
+    joined_at = models.DateTimeField(auto_now_add=False)
+    
+    
+    class Meta:
+        verbose_name = 'Аъзои гурӯҳ'
+        verbose_name_plural = 'Аъзои гурӯҳҳо'
+        unique_together = ['group', 'user']
+        
+    def __str__(self):
+        return f'{self.user.username} in {self.group.name}'
+    
+class Quiz(models.Model):
+    MODE_CHOICES = (
+        ('individual', 'Индивидуалӣ'),
+        ('group', 'Гурӯҳӣ'),
+    )
+    
+    LEVEL_TYPE_CHOICES = (
+        ('school', 'Мактаб'),
+        ('university', 'Донишгоҳ'),
+    )
+    
+    STATUS_CHOICES = (
+        ('draft', 'Навишта'),
+        ('published', 'Нашршуда'),
+        ('active', 'Фаъол'),
+        ('finished', 'Анҷомёфта'),
+    )
+    
+    title = models.CharField(max_length=250,verbose_name="Сарлавҳа")
+    description = models.TextField(blank=True,verbose_name='Тавсиф')
+    subject = models.ForeignKey(Subject, verbose_name='Фан', on_delete=models.SET_NULL,related_name='quizzes',null=True,blank=True)
+    qiuz_mode = models.CharField(max_length=50,choices=MODE_CHOICES , verbose_name='Реҷаи викторина')
+    level_type = models.CharField(max_length=50 , choices=LEVEL_TYPE_CHOICES, verbose_name='Навъи сатҳ',default='school')
+    end_level = models.IntegerField(verbose_name="Сатҳи анҷом")
+    start_time = models.IntegerField(verbose_name="Вақти оғоз")
+    end_time = models.IntegerField(verbose_name='Вақти анҷом')
+    is_online = models.BooleanField(default=True,verbose_name='Онлайн')
+    status = models.CharField(max_length=50 , choices=STATUS_CHOICES,verbose_name='Статус',default='draft')
+    time_limit = models.IntegerField(default=30,verbose_name='Мӯҳлати вақт (дақиқа)',help_text='Дақиқаҳо')
+    max_attempts = models.IntegerField(default=1,verbose_name='Максимум кӯшишҳо',help_text='Максимум кӯшишҳо')
+    pass_percentage =  models.IntegerField(default=60,verbose_name='Фоиз барои гузарондан',help_text='Фоизи гузарондан')
+    created_by = models.ForeignKey(User, verbose_name='Эҷодкунанда', on_delete=models.CASCADE , related_name='created_quizzes')
+    created_at = models.DateTimeField(auto_now_add=False)
+    
+    class Meta:
+        verbose_name = 'Викторина'
+        verbose_name_plural = 'Викторинаҳо'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        subject_name = self.subject.name if self.subject else "Без предмета"
+        return f"{self.title} ({subject_name})"
+    
+    def is_active(self):
+        now = timezone.now()
+        return self.status == 'active' and self.start_time <= now <= self.end_time
